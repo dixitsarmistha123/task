@@ -1,0 +1,86 @@
+Create a tree structure in MySql table that could store the following tree structure:
+http://prnt.sc/wcbzth 
+-----------------------------------------
+ 
+CREATE TABLE category (
+  id int(10) unsigned NOT NULL AUTO_INCREMENT,
+  name varchar(255) NOT NULL,
+  parent_no int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (id),
+  FOREIGN KEY (parent_no) REFERENCES category (id) 
+    ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+---------------------------------------------
+1) Write a query to find the root node.
+----------------------------------------------
+  SELECT
+    id, name
+FROM
+    category
+WHERE
+    parent_no IS NULL
+----------------------------------------------------------
+2) Write a query to find leaf node.
+-----------------------------------------------------------------
+SELECT
+    id, name
+FROM
+    category
+WHERE
+    parent_no = 1;
+------------------------------------------------------------------        
+3) Write a query to find non-leaf node.
+------------------------------------------------------
+ SELECT
+   DISTINCT( c.id), c.name
+FROM
+    category c
+        INNER JOIN
+    category c1 ON c1.parent_no = c.id
+WHERE
+    c1.id IS NOT NULL
+--------------------------------------------------------------------------------
+4) Write a query to find the path of each node. e.g. http://prnt.sc/wcc4bg
+----------------------------------------------------------------------------------   
+  WITH IGNORE RECURSIVE cat_path (id, name, c_path) AS
+(
+  SELECT id,name, name as c_path
+    FROM category
+    WHERE parent_no IS NULL
+  UNION ALL
+  SELECT c.id, c.name, CONCAT(cp.c_path, ' > ', c.name)
+    FROM cat_path AS cp JOIN category AS c
+      ON cp.id = c.parent_no
+)
+SELECT * FROM cat_path
+ORDER BY c_path
+
+-------------------------------------------------------------------------------------------------------------------------
+5) Write a function to calculate node level. e.g. Electronics is at 0 level, Camera is on level 2 and iOs is on level 3. |
+-------------------------------------------------------------------------------------------------------------------------
+WITH RECURSIVE cat_path (id, name, stage) AS
+(
+  SELECT id, name, 0 stage
+    FROM category
+    WHERE parent_no IS NULL
+  UNION ALL
+  SELECT c.id, c.name,cp.stage + 1
+    FROM cat_path AS cp JOIN category AS c
+      ON cp.id = c.parent_no
+)
+SELECT * FROM cat_path
+ORDER BY stage
+--------------------------------------------------------------------------------------------------------------------
+6) Write a procedure to get the immediate children.
+---------------------------------------------------------------------------------------------------------------------
+CREATE DEFINER=`root`@`localhost` PROCEDURE `imd_child`(IN `uid` INT) NOT DETERMINISTIC NO SQL SQL SECURITY DEFINER SELECT
+    id, name
+FROM
+    category
+WHERE
+    parent_no = uid
+----------------------------------------------------------------------------------------------------------------------
+7) Write a trigger to delete all children if parent node was deleted.
+8) Write a function/procedure to change the node's parent also move the the whole sub-tree if it is non-leaf node and alert/throw error if changing root node's parent. \
